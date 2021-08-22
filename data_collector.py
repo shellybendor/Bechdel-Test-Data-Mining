@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 from collections import Counter
 import numpy as np
 from collections import defaultdict
+import gender_guesser.detector as gen
 
 
 def get_data():
@@ -419,13 +420,13 @@ if __name__ == '__main__':
 
     # for each different graph we used *one* of the following functions and
     # commented out the rest
-    _plot_test_scores_over_time(bechdel_df)
-    _plot_passed_vs_failed_over_time(bechdel_df)
-    _plot_imdb_rating_and_test_scores(tmdb_df, bechdel_df)
-    _plot_budget_and_test_scores(tmdb_df, bechdel_df)
-    _plot_revenue_and_test_scores(tmdb_df, bechdel_df)
-    _pie_chart_of_genres(tmdb_df, bechdel_df)
-    _plot_director_gender(bechdel_df)
+    # _plot_test_scores_over_time(bechdel_df)
+    # _plot_passed_vs_failed_over_time(bechdel_df)
+    # _plot_imdb_rating_and_test_scores(tmdb_df, bechdel_df)
+    # _plot_budget_and_test_scores(tmdb_df, bechdel_df)
+    # _plot_revenue_and_test_scores(tmdb_df, bechdel_df)
+    # _pie_chart_of_genres(tmdb_df, bechdel_df)
+    # _plot_director_gender(bechdel_df)
     _plot_director_gender_by_year(bechdel_df)
-    _plot_writer_gender_by_year(bechdel_df)
-    _get_words_for_word_cloud(bechdel_df)
+    # _plot_writer_gender_by_year(bechdel_df)
+    # _get_words_for_word_cloud(bechdel_df)
