@@ -1,25 +1,18 @@
 # imports
-import urllib, json
 import pandas as pd
 import matplotlib.pyplot as plt
 from collections import Counter
 import numpy as np
 from collections import defaultdict
-from plotnine import *
-import gender_guesser.detector as gen
-from sklearn.model_selection import train_test_split
-from sklearn.svm import SVC
-from sklearn.metrics import accuracy_score
 
 
-def _get_data():
+def get_data():
     # Getting data from Bechdel Test Api
     df = pd.read_json('http://bechdeltest.com/api/v1/getAllMovies')
     # Removing movies from before 1967 (no movie passed before this year)
     df_recent = df[df['year']>=1967]
     # Data cleaning
     df_recent.rename(columns={'rating': 'Bechdel Score'}, inplace=True)
-    # df_recent.loc[:, 'year'] = pd.to_datetime(df_recent['year'], format='%Y')
     df_recent['Bechdel Score'] = df_recent['Bechdel Score'].astype('category',
                                                            copy=False)
     passed_test_column = []
@@ -86,7 +79,7 @@ def _plot_passed_vs_failed_over_time(df):
     plt.show()
 
 
-def _get_df_from_tmdb():
+def get_df_from_tmdb():
     df = pd.read_json("bechdel_movies.json")
     return df
 
@@ -419,103 +412,20 @@ def _get_words_for_word_cloud(bechdel_df):
     print(' '.join(words))
 
 
-def _encode_gender(dfLatest, position):
-    # Predicting gender of writer from first name:
-    d = gen.Detector()
-    genders = []
-    firstNames = dfLatest[position].str.split().str.get(0)
-    for name in firstNames:
-        if d.get_gender(name) == 'male':
-            genders.append('male')
-        elif d.get_gender(name) == 'female':
-            genders.append('female')
-        else:
-            genders.append('unknown')
-    dfLatest[position + ' gender'] = genders
-    dfLatest = dfLatest[dfLatest[position + ' gender'] != 'unknown']
-    # Encode the variable gender into a new dataframe:
-    dfLatest['Male ' + position] = dfLatest[position + ' gender'].map({'male': 1, 'female': 0})
-    dfLatest = dfLatest.drop([position, position + ' gender'], axis=1)
-    return dfLatest
-
-
-def seperate_categories(x, all_categories):
-    cat = []
-    for item in x:
-        cat.append(item.get('name'))
-        all_categories.add(item.get('name'))
-    return cat
-
-
-def _create_csv_from_classification(tmdb_df, bechdel_df):
-    latest = pd.read_csv('movielatest.csv', encoding="latin")
-    pd.set_option('display.max_columns', None)
-    latest = latest[['name', 'company', 'country', 'year', 'director', 'writer', 'star']]
-    latest.rename(columns={'name': 'title'}, inplace=True)
-    merged_df = pd.merge(bechdel_df, tmdb_df, how="left",
-                         left_on=['title'], right_on=["title"])
-    merged_df = merged_df[['title', 'Passed Test', 'adult', 'genres', 'budget',
-                           'popularity', 'revenue']]
-
-    merged_df = merged_df[merged_df['budget'] > 0]
-    merged_df = merged_df[merged_df['revenue'] > 0]
-    merged_df = pd.merge(merged_df, latest, how='left', left_on=['title'],
-                        right_on=['title'])
-    merged_df = merged_df.dropna()
-    merged_df = merged_df.drop_duplicates(subset=['title'])
-    # creating gender features for predictions
-    merged_df = _encode_gender(merged_df, 'director')
-    merged_df = _encode_gender(merged_df, 'writer')
-    merged_df = _encode_gender(merged_df, 'star')
-
-    # creating genre features for predictions
-    all_categories = set()
-    merged_df['genres'] = merged_df['genres'].apply(lambda x: seperate_categories(x, all_categories))
-
-    for item in list(all_categories):
-        merged_df[item] = merged_df['genres'].apply(lambda x: 1 if item in x else 0)
-
-    # create dummies for country and company
-    merged_df = pd.get_dummies(merged_df, columns=["country", "company"])
-
-    merged_df = merged_df.drop(['genres', 'title'], axis=1)
-    merged_df.to_csv("bechdel_csv_for_predictions.csv")
-
-
-def _split_data_into_sets():
-    df = pd.read_csv("bechdel_csv_for_predictions.csv")
-    y = df['Passed Test']
-    df = df.drop(columns=['Passed Test'])
-    return train_test_split(df, y, test_size=0.33, random_state=42)
-
-
-def _linear_svm(X_train, y_train, X_test, y_test):
-    clf = SVC()
-    clf.fit(X_train, y_train)
-    y_predict = clf.predict(X_test)
-    print(accuracy_score(y_test, y_predict))
-
 if __name__ == '__main__':
+    # pre-processing data and sanity checks
+    bechdel_df = get_data()
+    tmdb_df = get_df_from_tmdb()
 
-    # # pre-processing data and sanity checks
-    # bechdel_df = _get_data()
-    # # for each different graph we used one of the following functions and
-    # # commented out the rest
-    # # _plot_test_scores_over_time(bechdel_df)
-    # # _plot_passed_vs_failed_over_time(bechdel_df)
-    # tmdb_df = _get_df_from_tmdb()
-    # # _plot_imdb_rating_and_test_scores(tmdb_df, bechdel_df)
-    # # _plot_budget_and_test_scores(tmdb_df, bechdel_df)
-    # # _plot_revenue_and_test_scores(tmdb_df, bechdel_df)
-    # # _pie_chart_of_genres(tmdb_df, bechdel_df)
-    # # _plot_director_gender(bechdel_df)
-    # # _plot_director_gender_by_year(bechdel_df)
-    # # _plot_writer_gender_by_year(bechdel_df)
-    # # _get_words_for_word_cloud(bechdel_df)
-    #
-    # # function for creating csv for predition stage
-    # _create_csv_from_classification(tmdb_df, bechdel_df)
-
-    # creating data model and predictions stage
-    X_train, X_test, y_train, y_test = _split_data_into_sets()
-    _linear_svm(X_train, y_train, X_test, y_test)
+    # for each different graph we used *one* of the following functions and
+    # commented out the rest
+    _plot_test_scores_over_time(bechdel_df)
+    _plot_passed_vs_failed_over_time(bechdel_df)
+    _plot_imdb_rating_and_test_scores(tmdb_df, bechdel_df)
+    _plot_budget_and_test_scores(tmdb_df, bechdel_df)
+    _plot_revenue_and_test_scores(tmdb_df, bechdel_df)
+    _pie_chart_of_genres(tmdb_df, bechdel_df)
+    _plot_director_gender(bechdel_df)
+    _plot_director_gender_by_year(bechdel_df)
+    _plot_writer_gender_by_year(bechdel_df)
+    _get_words_for_word_cloud(bechdel_df)
